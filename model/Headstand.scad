@@ -114,12 +114,13 @@ module knuckle(index) {
 
 module hinge_hardware(indices) {
     for (i=indices) knuckle(i);
-    // At 180 degrees each pair of faces butts on the hinge centre plane.
-    // The pads grow from the bed and leave space between the drain outlets.
+    // Raised faces meet on the open hinge centre plane. Paired undercuts
+    // leave a 4 mm-wide passage at sink level, clear to both ends of the hinge.
     for (x=[-length/2+10,length/2-10])
         yz_prism(x-3.2,6.4)
-            polygon([[width/2-1.2,0],[pivot_y-0.6,0],[pivot_y,0.6],
-                     [pivot_y,4.4],[width/2-0.6,6.5],[width/2-1.2,6.5]]);
+            polygon([[width/2-1.2,0],[pivot_y-2.4,0],[pivot_y-2,0.4],
+                     [pivot_y-2,2.3],[pivot_y,4.3],[pivot_y,5.5],
+                     [width/2-0.6,6.5],[width/2-1.2,6.5]]);
 }
 
 module cradle(x,d) {

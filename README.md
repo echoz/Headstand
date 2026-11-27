@@ -2,7 +2,7 @@
 
 Headstand is a printable travel case for two classic Oral-B round brush heads that share one handle. Pack both heads lengthwise in the divided tray with their bristles up. At the sink, flip the case open flat and move the heads into the two upright sockets in the lid. Water can leave through the side of the case while both halves rest on the counter.
 
-The closed case measures **81.6 × 53.1 × 32.0 mm**, including hinge and latch. It opens to an **81.6 × 97.8 mm** footprint. The sockets tuck into the space above the packed brush shafts.
+The closed case measures **81.6 × 53.1 × 32.0 mm**, including hinge and latch. It opens to an **81.6 × 97.8 mm** footprint. The sockets tuck into the space above the packed brush shafts. When open, their outlets feed a 4 mm wide channel under the hinge stops so water can escape at either end.
 
 ![CAD rendering of the case, open with two illustrative brush heads and closed for travel](renders/Headstand-preview.png)
 
@@ -22,8 +22,8 @@ The three files sliced individually in Bambu Studio 2.8.2.61 using the X1 Carbon
 | Part | Estimated time | Estimated PETG |
 | --- | ---: | ---: |
 | Socket sample | 24 min | 3.5 g |
-| Travel tray | 52 min | 21.4 g |
-| Stand lid | 49 min | 20.8 g |
+| Travel tray | 52 min | 21.3 g |
+| Stand lid | 49 min | 20.7 g |
 
 ## Edit and verify
 

@@ -107,20 +107,37 @@ def check_sockets(lid):
     print("Both upright sockets admit a 14.8 mm gauge with surrounding lateral support")
 
 
+def connected_passage(obstacles, locations):
+    # Keep 0.7 mm of clearance to each wall. Hairline cracks are ineffective outlets.
+    window = CrossSection.square((140, 140), center=True).translate((0, PIVOT_Y))
+    spaces = (window - obstacles.offset(0.7)).decompose()
+    probes = [CrossSection.circle(0.15).translate(point) for point in locations]
+    return any(all((space ^ probe).area() >= 0.99 * probe.area() for probe in probes) for space in spaces)
+
+
 def check_drainage(tray, lid):
     for y in (-10.2, 10.2):
         require(not tray.ray_cast((28, y, 2.7), (50, y, 2.7)), f"Blocked storage lane drain at Y={y}")
-    # Below a seated heel, one connected air space must reach both the socket and open air.
-    plane = CrossSection.square((130, 100), center=True)
-    outside = CrossSection.circle(0.5).translate((0, 40))
-    inlets = [CrossSection.circle(0.6).translate((x, y)) for x, y in SOCKETS]
-    for z in (2.65, 2.8, 2.95, 3.1):
-        spaces = (plane - lid.slice(z)).decompose()
-        for space in spaces:
-            if (space ^ outside).area() > 0.1 and all((space ^ inlet).area() > 0.1 for inlet in inlets):
-                print(f"Both sockets drain to the exterior below the heels at Z={z:.2f} mm; travel ports clear")
-                return
-    raise ValueError("No common horizontal drainage path found below the two seated heels")
+    opened = tray + swing_lid(lid, 0)
+    upper_level = 2.65  # below the heels
+    lower_level = 0.4   # just above the counter
+    upper = opened.slice(upper_level)
+    lower = opened.slice(lower_level)
+    drops = [(x, PIVOT_Y) for x, _ in SOCKETS]
+    for (x, y), drop in zip(SOCKETS, drops):
+        inlet = (x, y + 2 * PIVOT_Y)
+        require(connected_passage(upper, [inlet, drop]), f"Socket at X={x} cannot reach the hinge channel")
+        column = Manifold.cylinder(upper_level - lower_level, 0.7).translate((*drop, lower_level))
+        require((column ^ opened).volume() < VOLUME_TOLERANCE, f"Blocked fall below outlet at X={x}")
+
+    # Check each exit with the other end dammed, then seal both as a negative control.
+    dams = [CrossSection.square((4, 10), center=True).translate((x, PIVOT_Y)) for x in (-31, 31)]
+    counter = (50, PIVOT_Y)
+    for dam in dams:
+        require(connected_passage(lower + dam, drops + [counter]), "A hinge stop obstructs the counter-level exit")
+    require(not connected_passage(lower + dams[0] + dams[1], drops + [counter]),
+            "Sealed hinge channel unexpectedly passes the drainage check")
+    print("Both sockets drain through the open assembly to either counter-level exit; travel ports clear")
 
 
 if __name__ == "__main__":
