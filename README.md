@@ -1,5 +1,15 @@
 # Headstand
 
+## Folding peg case · design concept
+
+The stand folds into a **33 × 29.7 × 14.4 mm** case for the empty pegs. Carry the brush heads separately. Open the case flat to make a **53.1 × 33 mm** base. One head sits on each half. The pegs are staggered so they pass beside one another when the case closes. Four side openings let water escape under the raised heels.
+
+The fit target is the classic Oral-B Pro CrossAction head. The 5.6 mm peg diameter and 7 mm insertion depth are adjustable design assumptions. The manufacturer identifies the brush-head family. Fit on actual heads and latch feel remain unverified. [Oral-B Pro brush heads](https://oralb.com/en-us/products/replacement-brush-heads/non-io-brush-heads/)
+
+![The folding stand closed, open with both pegs exposed, and open with one illustrative head mounted](renders/Folding-stand.png)
+
+Use the `open` and `closed` views in the [editable OpenSCAD concept](model/Folding-stand.scad).
+
 ## Compact peg stand
 
 Set two classic Oral-B brush heads over the tapered pegs on this single-piece stand. Each peg disappears inside its head. Three small pads support each heel 0.8 mm above the deck, giving water a path out across the open edge. The stand measures **50 × 32 × 12.2 mm** with the heads removed. The pegs are 24 mm apart.
