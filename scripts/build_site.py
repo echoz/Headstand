@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PAGE_FILES = (
     "index.html",
     "styles.css",
+    "assets/case-interior.webp",
     "assets/case-closed.webp",
     "assets/case-packed.webp",
     "assets/case-open.webp",

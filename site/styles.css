@@ -314,10 +314,16 @@ h1 span {
 }
 
 @supports selector(:has(*)) {
+  .view-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
   .product-view {
     display: none;
   }
 
+  .view-layout:has([value="interior"]:checked) .interior-view,
   .view-layout:has([value="closed"]:checked) .closed-view,
   .view-layout:has([value="packed"]:checked) .packed-view,
   .view-layout:has([value="open"]:checked) .open-view {
@@ -325,29 +331,24 @@ h1 span {
   }
 
   .view-controls {
-    position: absolute;
-    z-index: 1;
-    inset-inline-end: 0.8rem;
-    inset-block-end: 0.8rem;
-    display: flex;
-    gap: 0.1rem;
-    padding: 0.22rem;
-    border: 1px solid #e1ede3;
-    border-radius: 0.36rem;
+    order: 1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
+    padding: 0.35rem;
+    border-block-start: 1px solid #e1ede3;
     background: var(--white);
   }
 
   .view-controls label {
-    display: flex;
     cursor: pointer;
   }
 
   .view-controls span {
     display: grid;
     place-content: center;
-    min-inline-size: 3.35rem;
     min-block-size: 2.75rem;
-    padding: 0.25rem 0.58rem;
+    padding: 0.25rem;
     border-radius: 0.25rem;
     color: var(--muted);
     font-size: 0.79rem;
@@ -381,7 +382,7 @@ h1 span {
     position: absolute;
     inset-block-end: 0.8rem;
     inset-inline-start: 0.8rem;
-    max-inline-size: calc(100% - 13rem);
+    max-inline-size: calc(100% - 1.6rem);
     padding: 0.54rem 0.68rem;
     border-radius: 0.25rem;
     background: var(--white);
@@ -617,10 +618,6 @@ h3 {
   .hero-actions {
     margin-block-start: 1.3rem;
   }
-
-  .product-view figcaption {
-    font-size: 0.64rem;
-  }
 }
 
 @media (max-width: 690px) {
@@ -695,27 +692,6 @@ h3 {
     grid-area: auto;
   }
 
-  @supports selector(:has(*)) {
-    .view-layout {
-      padding-block-end: 3.65rem;
-      background: var(--white);
-    }
-
-    .view-controls {
-      inset-inline-end: 0.45rem;
-      inset-block-end: 0.3rem;
-    }
-
-    .product-view figcaption {
-      inset-block-start: calc(100% + 0.35rem);
-      inset-block-end: auto;
-      display: flex;
-      align-items: center;
-      min-block-size: 2.95rem;
-      padding-block: 0.25rem;
-    }
-  }
-
   .print-layout {
     gap: 2rem;
   }
@@ -732,21 +708,6 @@ h3 {
 
   nav {
     gap: 0.6rem;
-  }
-
-  .view-controls {
-    inset-inline-end: 0.45rem;
-  }
-
-  .view-controls span {
-    min-inline-size: 2.86rem;
-    padding-inline: 0.36rem;
-  }
-
-  .product-view figcaption {
-    inset-inline-start: 0.45rem;
-    max-inline-size: calc(100% - 10rem);
-    padding: 0.4rem 0.45rem;
   }
 
   .product-specs div,

@@ -63,60 +63,91 @@ module storage_station() {
             [[0,peg_insertion]]));
 }
 
-module shaft_fillet(section) {
-    // A changing 45-degree fillet follows the shaft taper along the wall.
-    // At the crown it falls below the rigid disc, leaving the tuft bay clear.
-    wall_y = width/2-wall-lane+eps;
-    yz_prism(section.x,eps)
-        intersection() {
-            polygon([[floor_z-section.y,floor_z-eps],[wall_y,floor_z-eps],
-                     [wall_y,wall_y+section.y]]);
-            translate([-10,0]) square([20,axis_z]);
-        }
+// Each bank sweeps from the floor to the sidewall, widening at the two
+// rigid ends. The end-wall cove turns across the leaf and joins both banks.
+function unit(t) = min(1,max(0,t));
+function ease(t) = let(v=unit(t)) v*v*(3-2*v);
+function soft_join(a,b,r) =
+    let(k=min(r,(a+b)/2)) k==0 ? 0 : max(a,b) + pow(max(0,k-abs(a-b)),2)/(4*k);
+
+function bank_rise(x,y) =
+    let(heel = ease((-x-14)/20), crown = ease((x-7)/19),
+        toe = -6.4-4.8*heel-4.0*crown,
+        // Roll the shoulder down at the entrance to each crown. The
+        // matching return beside the snap gives its pocket a low spillway.
+        spillway = 0.48 * exp(-pow((x-21.6)/4.9,2)) * ease((7.75-y)/2.8),
+        side = 11.0 * (1-spillway) * pow(unit((y-toe)/(7.55-toe)),1.55),
+        end = 10.8 * pow(unit((abs(x)-28.5)/9.65),2.3),
+        // A broad heel seat returns under the inboard side of the heel.
+        // Its open edge runs back to the central floor in a long curve.
+        wrap = 10.8 * ease((-x-17)/18) * ease((y+11.3)/6.4),
+        crown_wrap = 13 * ease((x-25)/12) * ease((y+6)/8),
+        side_end = soft_join(side,max(end,crown_wrap),2.7))
+    min(10.8,max(0,soft_join(side_end,wrap,2.4)-0.8));
+
+// Roll the exposed lip of the shaft cradle into the bank. The short,
+// axial stop at the very end of the heel retains its fitted end face.
+function bank_height(x,y) =
+    let(stock = floor_z + bank_rise(x,y) - 0.08,
+        radius = lookup(x,[[-28,7.55],[0,5.65],[23,4.90]]),
+        cup = axis_z-sqrt(max(0,radius*radius-y*y)),
+        blend = ease((x+37.20)/0.85)*ease((23-x)/3),
+        lip = 1.65,
+        rounding = pow(max(0,lip-abs(stock-cup)),2)/(4*lip),
+        rounded = min(stock,cup)-rounding)
+    stock + blend*(rounded-stock);
+
+// Flat-topped stock at the heel and crescent at the crown are subsequently
+// dished to the hard parts of the brush. Bottom and outside edges overlap
+// the existing deck and wall.
+module bank_stock() {
+    nx = 152;
+    ny = 64;
+    stride = ny+1;
+    n = (nx+1)*stride;
+    points = [for (i=[0:nx],j=[0:ny])
+        let(x=-38.5+77*i/nx, y=-lane+(lane+8.1)*j/ny)
+        [x,y,bank_height(x,y)]];
+    rim = concat([for(i=[0:nx-1]) i*stride],
+                 [for(j=[0:ny-1]) nx*stride+j],
+                 [for(i=[nx:-1:1]) i*stride+ny],
+                 [for(j=[ny:-1:1]) j]);
+    lower = [for(k=rim) [points[k].x,points[k].y,floor_z-0.35]];
+    faces = concat(
+        [for(i=[0:nx-1],j=[0:ny-1]) each let(k=i*stride+j)
+            [[k,k+1,k+stride+1],[k,k+stride+1,k+stride]]],
+        [for(q=[0:len(rim)-1]) let(next=(q+1)%len(rim))
+             [rim[q],rim[next],n+next,n+q]],
+        [[for(q=[0:len(rim)-1]) n+q]]);
+    polyhedron(concat(points,lower),faces,convexity=4);
 }
 
-module packing_wall(front_lid) {
-    fillet = [[-37,2.06],[-28,2.06],[0,4.90],[18,5.55],[23,0.75],
-              [28.5,-1.60],[34,0.75],[37,2.06]];
-    difference() {
-        for(i=[0:len(fillet)-2]) hull() {
-            shaft_fillet(fillet[i]);
-            shaft_fillet(fillet[i+1]);
-        }
-        translate([28.5,6.1,axis_z]) rotate([90,0,0])
-            cylinder(r=8.8,h=12);
-    }
+module shaft_clearance() {
+    // The heel and shaft lift out vertically from the lower half-round.
+    for (section=[[-37.22,-28,7.55,7.55],[-28,0,7.55,5.65],[0,23,5.65,4.90]])
+        translate([section[0],0,axis_z]) rotate([0,90,0])
+            cylinder(h=section[1]-section[0],r1=section[2],r2=section[3],$fn=128);
+}
 
-    // The short end wall cups the last 4 mm of the rigid heel. The half-round
-    // opening lifts straight out when the matching half of the case is open.
-    difference() {
-        linear_extrude(height=axis_z)
-            hull() {
-                translate([-38.4,-8.0]) square([0.5,15.6]);
-                translate([-36.9,-6.7]) circle(r=1.25);
-                translate([-34.7,-4.8]) circle(r=1.3);
-                translate([-34.7,6.2]) circle(r=1.3);
-            }
-        translate([-37.20,0,axis_z])
-            rotate([0,90,0]) cylinder(r=7.55,h=5);
-    }
+module crown_clearance(front_lid) {
+    // In axial section the rigid disc meets a rounded inside corner.
+    // The cut widens toward the tufts so the soft ends remain unloaded.
+    relief = front_lid ? 0.095 : 0;
+    multmatrix([[1,0,0,0],[0,1,relief,-relief*4],[0,0,1,0],[0,0,0,1]])
+        translate([28.5,0,axis_z]) rotate([-90,0,0]) rotate_extrude($fn=128)
+            polygon(concat([[0,-19],[12.5,-19]],
+                [for(i=[0:28]) let(t=i/28) [12.5-3.74*ease(t),-8+10.5*t]],
+                [[8.76,5.75]],
+                [for(a=[5:5:90]) [8.47+0.29*cos(a),5.75+0.29*sin(a)]],
+                [[0,6.04]]));
+}
 
-    // Flare the corner inward against the flat disc back. The adjacent end
-    // face limits end play on the rigid disc rather than on the bristles.
-    // The front lip travels inward as it closes. Relieve its entrance while
-    // keeping the close fit against the upper edge of the rigid disc back.
-    for(i=[0,1]) hull() {
-        for(j=[i,i+1]) {
-            z = [0,4.5,axis_z-eps][j];
-            back_y = front_lid && j==2 ? 6.85 : 6.04;
-            translate([0,0,z]) linear_extrude(height=eps) polygon([
-                [16,7.55],[22,back_y],[37.5,back_y],[38.05,7.55]
-            ]);
-        }
+module packing_bank(front_lid) {
+    difference() {
+        bank_stock();
+        shaft_clearance();
+        crown_clearance(front_lid);
     }
-    linear_extrude(height=axis_z) polygon([
-        [37.25,6.9],[37.25,1.8],[38.05,0],[38.05,7.55],[36.9,7.55]
-    ]);
 }
 
 module shell(base) {
@@ -128,7 +159,10 @@ module shell(base) {
                 linear_extrude(height=axis_z) outline();
                 translate([0,0,floor_z]) linear_extrude(height=axis_z) outline(wall);
             }
-            for(sign=[-1,1]) head_frame(sign) packing_wall(!base && sign==-1);
+            intersection() {
+                linear_extrude(height=axis_z) outline(wall-0.35);
+                union() for(sign=[-1,1]) head_frame(sign) packing_bank(!base && sign==-1);
+            }
             storage_station();
         }
         water_passages();
