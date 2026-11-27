@@ -1,7 +1,5 @@
-// Level, print-in-place travel stand. All dimensions are in millimetres.
-// Both heads load into the base with their bristles pointing toward the outside.
+// Print flat open. The crowns face inward in opposite directions along the case.
 use <Folding-stand.scad>
-use <Compact-stand.scad>
 
 part = "open"; // [open, closed, base, lid]
 
@@ -13,73 +11,29 @@ peg_insertion = 7; // [4:0.2:7.2]
 $fn = 64;
 eps = 0.025;
 axis_z = 12.8;
-case_y = -24;
+case_y = -27.7;
+length = 79.2;
+width = 47.1;
+corner = 2.4;
 wall = 1.6;
-floor_z = 2.4;
-rail_height = 1;
-shaft_z = 12.65;
-lane = 7.35;
-yaw = 8;
-base_peg = [-13,-25.4];
-lid_peg = [13,-22.6]; // in the closed XY plan
+floor_z = 2.0;
+near_wall = case_y - width/2;
+base_peg = [-10,case_y];
+lid_peg = [10,case_y];
+lane = 14.45;
+
 assert(peg_diameter >= 4 && peg_diameter <= 6.2);
 assert(peg_insertion >= 4 && peg_insertion <= 7.2);
 
 module outline(inset=0) {
-    // The narrowed middle accommodates the clasp within the width of the crown bays.
-    side = [[-42.0,21.9],[-36.7,23.65],[-20.5,23.65],[-11.5,17.8],
-            [11.5,17.8],[20.5,23.65],[36.7,23.65],[42.0,21.9]];
-    translate([0,case_y]) offset(delta=-inset) offset(r=2.3) offset(delta=-2.3)
-        polygon(concat(side,[for(i=[len(side)-1:-1:0]) [side[i].x,-side[i].y]]));
+    translate([0,case_y]) offset(r=corner-inset)
+        square([length-2*corner,width-2*corner],center=true);
 }
 
-module body() {
-    difference() {
-        linear_extrude(height=axis_z-rail_height) outline();
-        translate([0,0,floor_z-rail_height]) linear_extrude(height=axis_z) outline(wall);
-    }
-}
-
+// Local +Y points toward the hard backs, away from the tufts.
 module head_frame(sign) {
-    translate([0,case_y-sign*lane,0]) rotate([0,0,sign==1 ? yaw : yaw+180])
-        children();
-}
-
-// Recess the bristle tips on both faces. The matching exterior pads keep the
-// floor thick at the recess and support the vent perimeters on the print bed.
-module crown_bays(margin=0) {
-    for(sign=[-1,1]) head_frame(sign)
-        translate([28.5,-12]) offset(r=3+margin) square([19,12],center=true);
-}
-
-module outlet_channels(station) {
-    // Each split rail supports the port rim while its centre drains to either edge.
-    for(x=[station.x,-34,-26,26,34])
-        translate([x,case_y,0]) hull()
-            for(level=[[-eps,3.3],[rail_height,1.3]])
-                translate([0,0,level.x]) linear_extrude(height=eps)
-                    square([level.y,60],center=true);
-}
-
-module storage_rails(station) {
-    difference() {
-        intersection() {
-            linear_extrude(height=rail_height+eps) outline();
-            union() {
-                linear_extrude(height=rail_height+eps) difference() {
-                    outline();
-                    outline(1.8);
-                }
-                linear_extrude(height=rail_height+eps) crown_bays(0.9);
-                for(x=[-34,-26,-18.5,-13,-5,4,13,18.5,26,34])
-                    translate([x,case_y,0]) hull()
-                        for(z=[0,rail_height])
-                            translate([0,0,z]) linear_extrude(height=eps)
-                                square([5+2*z,52],center=true);
-            }
-        }
-        outlet_channels(station);
-    }
+    translate([0,case_y+sign*lane,0])
+        rotate([0,0,sign==1 ? 0 : 180]) children();
 }
 
 module sole_slot(x, y, length, diameter) {
@@ -87,41 +41,100 @@ module sole_slot(x, y, length, diameter) {
         translate([x,y+dy,-eps]) cylinder(d=diameter,h=floor_z+2*eps);
 }
 
-module drains(station) {
-    for(dy=[-4.45,4.45]) sole_slot(station.x,station.y+dy,0.5,1.9);
-    for(sign=[-1,1], x=[26,34])
-        sole_slot(sign*x,case_y-sign*15.2,6.4,2.2);
-}
+module water_passages(station) {
+    // Short through-slots beneath the hollow heel also cross its seating rim.
+    for(sign=[-1,1])
+        sole_slot(station.x,station.y+sign*6.05,5.5,2);
+    for(sign=[-1,1]) head_frame(sign)
+        for(x=[26,32]) sole_slot(x,-12,5,2);
 
-module storage_shell(station) {
-    difference() {
-        union() {
-            translate([0,0,rail_height]) body();
-            storage_rails(station);
-        }
-        drains(station);
-        translate([0,0,floor_z-0.85]) linear_extrude(height=0.85+eps)
-            intersection() {
-                outline(wall+0.2);
-                crown_bays();
-            }
-    }
+    // Shallow channels across the sole drain on a level counter. The narrow
+    // roofs bridge between solid bed-contact areas with the supports off.
+    for(x=[station.x,-32,-26,26,32])
+        translate([x,case_y,0]) hull()
+            for(level=[[-eps,3.4],[1,1.4]])
+                translate([0,0,level.x]) linear_extrude(height=eps)
+                    square([level.y,width+1],center=true);
 }
 
 module storage_station(station) {
-    // Define the taper from the fixed heel plane; changing insertion preserves fit there.
     radius = peg_diameter/2;
     shoulder = radius-0.8;
     nose = min(1.2,shoulder-0.45);
-    lift = 0.8;
-    joint = lift+peg_insertion-nose;
-    root = radius+0.8*lift/(peg_insertion-nose);
-    translate([station.x,station.y,floor_z]) {
-        rotate_extrude() polygon(concat(
-            [[0,-eps],[root+0.45,-eps],[root+0.45,0],[root+0.12,0.12],[radius,lift]],
-            [for(a=[0:10:90]) [shoulder-nose+nose*cos(a),joint+nose*sin(a)]],
-            [[0,lift+peg_insertion]]));
-        for(a=[90,210,330]) rotate([0,0,a]) translate([0,0,-4.4]) heel_pad();
+    translate([station.x,station.y,floor_z]) rotate_extrude()
+        polygon(concat([[0,-eps],[radius,-eps],[radius,0]],
+            [for(a=[0:10:90])
+                [shoulder-nose+nose*cos(a),peg_insertion-nose+nose*sin(a)]],
+            [[0,peg_insertion]]));
+}
+
+module shaft_fillet(section) {
+    // A changing 45-degree fillet follows the shaft taper along the wall.
+    // At the crown it falls below the rigid disc, leaving the tuft bay clear.
+    wall_y = width/2-wall-lane+eps;
+    yz_prism(section.x,eps)
+        intersection() {
+            polygon([[floor_z-section.y,floor_z-eps],[wall_y,floor_z-eps],
+                     [wall_y,wall_y+section.y]]);
+            translate([-10,0]) square([20,axis_z]);
+        }
+}
+
+module packing_wall(front_lid) {
+    fillet = [[-37,2.06],[-28,2.06],[0,4.90],[18,5.55],[23,0.75],
+              [28.5,-1.60],[34,0.75],[37,2.06]];
+    difference() {
+        for(i=[0:len(fillet)-2]) hull() {
+            shaft_fillet(fillet[i]);
+            shaft_fillet(fillet[i+1]);
+        }
+        translate([28.5,6.1,axis_z]) rotate([90,0,0])
+            cylinder(r=8.8,h=12);
+    }
+
+    // The short end wall cups the last 4 mm of the rigid heel. The half-round
+    // opening lifts straight out when the matching half of the case is open.
+    difference() {
+        linear_extrude(height=axis_z)
+            hull() {
+                translate([-38.4,-8.0]) square([0.5,15.6]);
+                translate([-36.9,-6.7]) circle(r=1.25);
+                translate([-34.7,-4.8]) circle(r=1.3);
+                translate([-34.7,6.2]) circle(r=1.3);
+            }
+        translate([-37.20,0,axis_z])
+            rotate([0,90,0]) cylinder(r=7.55,h=5);
+    }
+
+    // Flare the corner inward against the flat disc back. The adjacent end
+    // face limits end play on the rigid disc rather than on the bristles.
+    // The front lip travels inward as it closes. Relieve its entrance while
+    // keeping the close fit against the upper edge of the rigid disc back.
+    for(i=[0,1]) hull() {
+        for(j=[i,i+1]) {
+            z = [0,4.5,axis_z-eps][j];
+            back_y = front_lid && j==2 ? 6.85 : 6.04;
+            translate([0,0,z]) linear_extrude(height=eps) polygon([
+                [16,7.55],[22,back_y],[37.5,back_y],[38.05,7.55]
+            ]);
+        }
+    }
+    linear_extrude(height=axis_z) polygon([
+        [37.25,6.9],[37.25,1.8],[38.05,0],[38.05,7.55],[36.9,7.55]
+    ]);
+}
+
+module shell(base,station) {
+    difference() {
+        union() {
+            difference() {
+                linear_extrude(height=axis_z) outline();
+                translate([0,0,floor_z]) linear_extrude(height=axis_z) outline(wall);
+            }
+            for(sign=[-1,1]) head_frame(sign) packing_wall(!base && sign==-1);
+            storage_station(station);
+        }
+        water_passages(station);
     }
 }
 
@@ -131,66 +144,29 @@ module bearing_mount(base) {
     pitch = (27+0.55)/5;
     for(i=base ? [0,2,4] : [1,3])
         yz_prism(-13.5+i*pitch,pitch-0.55)
-            polygon([[-7.35,rail_height],[-4.15,0],[-3.2,0],[-3.2,lift-1+eps],
+            polygon([[-7.35,1],[-4.25,0],[-3.2,0],[-3.2,lift-1+eps],
                      [-5.5,lift+0.3],[-7.35,lift+0.3]]);
-    // Raked stops meet only beyond the level printing/resting position.
+    // The raked faces meet only beyond the level printing/resting position.
     for(x=[-8.8,8.8])
         yz_prism(x-1.7,3.4)
-            polygon([[-7.35,rail_height],[-1.13,0],[-0.57,0.55],[-0.49,2.25],
+            polygon([[-7.35,1],[-1.13,0],[-0.57,0.55],[-0.49,2.25],
                      [-5.95,3.85],[-7.35,3.85]]);
 }
 
 module storage_latch(base) {
-    // The original latch profile sits at the same offset below the raised hinge.
     lift = axis_z-7.2;
-    shift = case_y-17.8+25;
-    translate([0,shift,lift]) if(base) spring_clip(); else catch_ridge();
+    translate([0,near_wall+25,lift]) if(base) spring_clip(); else catch_ridge();
     if(base)
         yz_prism(-3.53,7.06)
-            polygon([[case_y-17.8+1.1,rail_height],[case_y-17.8-0.95,rail_height],
-                     [case_y-17.8-2,rail_height+1.05],[case_y-17.8-2.035,lift+0.25],
-                     [case_y-17.8+1.1,lift+0.5]]);
-}
-
-module saddle(x, radius, base) {
-    thick = 3.2;
-    free_radius = radius+(base ? 0.17 : 0.45);
-    half_width = base ? radius+1.45 : radius*0.64;
-    center_z = base ? shaft_z : 2*axis_z-shaft_z;
-    yz_prism(x-thick/2,thick)
-        difference() {
-            translate([-half_width,floor_z-eps])
-                square([2*half_width,center_z-1.05-floor_z+eps]);
-            translate([0,center_z]) circle(r=free_radius);
-        }
-}
-
-module packed_fixtures(base) {
-    for(sign=[-1,1]) head_frame(sign) {
-        saddle(-32,7.2,base);
-        saddle(4,5.13,base);
-        if(base) {
-            // The flat hard back of each disc registers against this blade near
-            // its top and bottom edges. Both tufts face away from the blade.
-            yz_prism(25,7)
-                polygon([[6.12,floor_z-eps],[10.5,floor_z-eps],[10.5,4.8],[7.12,10.2],
-                         [7.12,shaft_z+7.85],[6.92,shaft_z+8.25],[6.32,shaft_z+8.25],
-                         [6.12,shaft_z+7.85]]);
-            // End play is taken at the heel face and the hard edge of the disc.
-            translate([-39.1,-3.2,floor_z-eps]) cube([1.65,6.4,shaft_z-1-floor_z]);
-            translate([37.55,2.4,floor_z-eps]) cube([3.15,3.25,shaft_z+0.8-floor_z]);
-        }
-    }
+            polygon([[near_wall+1.1,0],[near_wall-0.95,0],[near_wall-2,1.05],
+                     [near_wall-2.035,lift+0.25],[near_wall+1.1,lift+0.5]]);
 }
 
 module leaf_storage(base) {
-    station = base ? base_peg : lid_peg;
     union() {
-        storage_shell(station);
-        storage_station(station);
+        shell(base,base ? base_peg : lid_peg);
         bearing_mount(base);
         storage_latch(base);
-        packed_fixtures(base);
     }
 }
 

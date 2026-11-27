@@ -11,15 +11,17 @@ from manifold3d import CrossSection, Error, Manifold
 
 from check_compact_stand import support_margin
 from check_folding_stand import (
-    AREA_TOLERANCE, HEEL_SEAT as FOLDING_HEEL_HEIGHT, MIN_PRINT_GAP, PIVOT_Z as FOLDING_PIVOT_Z,
-    check_head_mount, check_hinge, read_leaves,
+    AREA_TOLERANCE, MIN_PRINT_GAP, PIVOT_Z as FOLDING_PIVOT_Z, check_hinge, read_leaves,
 )
 from check_meshes import EXPORTS, VOLUME_TOLERANCE, packed_heads, require
 
 PIVOT = np.array((0, 0, 12.8))
-STATIONS = ((-13, -25.4), (13, 22.6))
-HEEL_HEIGHT = 3.2
-PACKED_ENVELOPE = (85, 52, 26)
+STATIONS = ((-10, -27.7), (10, 27.7))
+HEEL_HEIGHT = 2.0
+PEG_DIAMETER = 5.6
+PEG_INSERTION = 7.0
+SHELL_FOOTPRINT = ((-39.6, -51.25), (39.6, -4.15))
+PACKED_ENVELOPE = (80, 58, 26)
 
 
 @dataclass(frozen=True)
@@ -30,14 +32,15 @@ class PackingPosition:
     def place(self, piece, roll=0, shift=(0, 0, 0)):
         return self.move_in_lane(piece, (roll, 0, 0), (0, 0, 0)).translate(shift)
 
-    def move_in_lane(self, piece, rotation, shift):
-        return (piece.rotate((90, 0, 0)).rotate(rotation).translate(shift)
+    def move_in_lane(self, piece, rotation, shift, pivot=(0, 0, 0)):
+        pivot = np.asarray(pivot)
+        return (piece.rotate((90, 0, 0)).translate(-pivot).rotate(rotation).translate(pivot + shift)
                 .rotate((0, 0, self.yaw)).translate(self.center))
 
 
 PACKING_POSITIONS = (
-    PackingPosition((0, -31.35, 12.65), 8),
-    PackingPosition((0, -16.65, 12.65), 188),
+    PackingPosition((0, -13.25, 12.8), 0),
+    PackingPosition((0, -42.15, 12.8), 180),
 )
 
 
@@ -89,17 +92,18 @@ def check_insertion(base, lid, gauge, placements):
 def check_packed_walls(closed, placement, number, wall_faces):
     yaw = radians(placement.yaw)
     along = np.array((cos(yaw), sin(yaw), 0))
-    outside = np.array((sin(yaw), -cos(yaw), 0))
+    outside = np.array((-sin(yaw), cos(yaw), 0))
     up = np.array((0, 0, 1))
-    crown = np.array(placement.center) + 28.5 * along + 12 * outside
+    crown = np.array(placement.center) + 28.5 * along - 9 * outside
     heel = np.array(placement.center) - 33 * along
     for name, location, end in (("crown", crown, along), ("heel", heel, -along)):
-        # The vertical rays run between the floor and roof vents. The side rays
-        # run above and below the hinge split, away from the thin closing seam.
+        # These locations leave the floor and roof vents clear. Horizontal
+        # rays bracket the closing seam so each half provides a barrier.
         directions = (
             ("side", location - 4 * up, outside),
             ("side", location + 4 * up, outside),
-            ("end", location, end),
+            ("end", location - 4 * up, end),
+            ("end", location + 4 * up, end),
             ("floor", location, -up),
             ("roof", location, up),
         )
@@ -114,14 +118,59 @@ def check_packed_walls(closed, placement, number, wall_faces):
                     abs(leave.position[axis] - face_limit) <= 1.25, problem)
 
 
-def check_enclosure(closed, heads, placements, envelope):
+def rounded_rectangle(bounds, radius):
+    lower, upper = np.asarray(bounds)
+    size = upper - lower - 2 * radius
+    center = (lower + upper) / 2
+    return CrossSection.square(size, center=True).offset(radius, circular_segments=64).translate(center)
+
+
+def check_rectangular_shell(closed, bounds, wall_levels, hardware):
+    lower, upper = np.asarray(bounds)
+    tolerance = 0.08  # Clear of the polygonal outline and STL boundary.
+    outline = CrossSection.square(upper - lower).translate(lower)
+    bottom = closed.bounding_box()[2] - 1
+    height = closed.bounding_box()[5] - bottom + 1
+    rectangular_prism = outline.offset(tolerance).extrude(height).translate((0, 0, bottom))
+    require((closed - (rectangular_prism + hardware)).volume() < VOLUME_TOLERANCE,
+            "Shell projects outside the rectangular footprint beyond the hinge and catch")
+
+    # The two contours bound the corner radius while requiring material right
+    # along each straight wall. Floor ports and internal supports are out of band.
+    maximum_outline = rounded_rectangle(bounds, 1).offset(tolerance)
+    minimum_outline = rounded_rectangle(bounds, 2.5)
+    perimeter = minimum_outline.offset(-tolerance) - minimum_outline.offset(-0.3)
+    for level in wall_levels:
+        shell = closed.slice(level)
+        local_hardware = hardware.slice(level)
+        require((shell - maximum_outline - local_hardware).area() < AREA_TOLERANCE,
+                f"Exterior corners are too sharp at Z={level:g} mm")
+        require((perimeter - shell - local_hardware).area() < AREA_TOLERANCE,
+                f"Exterior does not have four straight walls with small corners at Z={level:g} mm")
+    print("Four straight exterior walls and small corner radii on both halves, with local hinge and catch exceptions")
+
+
+def check_freestanding_pegs(closed, footprint, stations):
+    # Section the closed leaves below the peg tips. Count only contours well
+    # inside the perimeter so wall-connected supports and hardware can vary.
+    interior = rounded_rectangle(footprint, 2.5).offset(-0.2)
+    for station, level in zip(stations, (5, 2 * PIVOT[2] - 5)):
+        islands = [section for section in closed.slice(level).decompose()
+                   if (section - interior).area() < AREA_TOLERANCE]
+        peg = CrossSection.circle(0.1, 24).translate((station[0], -abs(station[1])))
+        require(len(islands) == 1 and (peg - islands[0]).area() < AREA_TOLERANCE,
+                f"Expected only the upright peg as a freestanding interior feature at Z={level:g} mm")
+    print("Only the upright peg stands free of the walls on each leaf")
+
+
+def check_enclosure(closed, heads, placements, envelope, footprint):
     lower = np.asarray(closed.bounding_box()[:3])
     upper = np.asarray(closed.bounding_box()[3:])
     dimensions = upper - lower
     require(np.all(dimensions <= envelope), f"Storage case exceeds the compact envelope: {dimensions}")
     hull = closed.hull()
-    # Ignore the latch and hinge protrusions when looking for the long walls.
-    wall_faces = ((lower[0], upper[0]), (-48, 0), (lower[2], upper[2]))
+    # Locate the barriers at the case walls, clear of local latch and hinge parts.
+    wall_faces = (*zip(*footprint), (lower[2], upper[2]))
     for number, (head, placement) in enumerate(zip(heads, placements), 1):
         require((head - hull).volume() < VOLUME_TOLERANCE,
                 f"Head {number} protrudes beyond the closed storage enclosure")
@@ -304,10 +353,61 @@ def check_combined_transport(closed, gauge, placements):
     print("No bristle contact before a rigid stop on 16 sampled combined-motion paths")
 
 
-def check_upright_mount(leaf, station, heel_height):
-    check_head_mount(leaf.translate((0, 0, FOLDING_HEEL_HEIGHT - heel_height)), station)
+def check_heel_pivot_transport(closed, gauge, placements):
+    # The heel occupies the first 9 mm of the 74 mm gauge.
+    heel = (-32.5, 0, 0)
+    angles = [step / 10 for step in range(1, 101)]
+    axial_travel = [step / 10 for step in range(1, 41)]
+    tips = bristle_tips(gauge)
+    hard_body = gauge - tips
+    for number, placement in enumerate(placements, 1):
+        neighbor = placements[2 - number]
+        neighbor_tips = neighbor.place(tips)
+        rigid_obstacles = closed + neighbor.place(hard_body)
+        axial_offsets = [0]
+        for direction in (-1, 1):
+            def shifted(distance):
+                return placement.move_in_lane(hard_body, (0, 0, 0), (direction * distance, 0, 0))
+
+            travel = first_contact(rigid_obstacles, shifted, axial_travel)
+            require(travel is not None, f"Head {number} has no rigid axial stop toward {direction:+d}X")
+            axial_offsets.append(direction * travel / 2)
+
+        # Pivot from the nominal seat and halfway into the available axial play on either side.
+        for offset in axial_offsets:
+            for direction in (-1, 1):
+                def moved(piece, angle):
+                    rotation = (0, 0, direction * angle)
+                    return placement.move_in_lane(piece, rotation, (offset, 0, 0), pivot=heel)
+
+                start = f"Head {number} at {offset:+.2f} mm axial offset during {direction:+d} heel-pivot yaw"
+                stop = first_contact(rigid_obstacles, lambda angle: moved(hard_body, angle), angles)
+                require(stop is not None, f"{start} has no rigid stop within {angles[-1]:g}°")
+                for angle in [0] + [sample for sample in angles if sample < stop] + [stop]:
+                    require(moved(tips, angle).min_gap(rigid_obstacles, 0.02) >= 0.02 and
+                            moved(gauge, angle).min_gap(neighbor_tips, 0.02) >= 0.02,
+                            f"{start} makes bristle contact at {angle:.2f}°")
+    print("A rigid stop precedes bristle contact on 12 sampled heel-pivot yaw paths including axial play")
+
+
+def check_upright_mount(leaf, station, heel_height, diameter, insertion):
     heel = CrossSection.circle(7.2, 72).translate(station)
     cavity = CrossSection.circle(3.1, 72).translate(station)
+    contacts = leaf.slice(heel_height - 0.01) ^ (heel - cavity)
+    require(contacts.area() > 1 and support_margin(contacts, station) > 2,
+            f"Heel at {station} lacks a seat under its rim")
+
+    # The floor slots may scallop the peg root. Measure the locating section above them.
+    peg = leaf.slice(heel_height + 0.15) ^ heel
+    minimum_peg = CrossSection.circle(diameter / 2 - 0.07, 72).translate(station)
+    maximum_peg = CrossSection.circle(diameter / 2 + 0.05, 72).translate(station)
+    require((minimum_peg - peg).area() < AREA_TOLERANCE and (peg - maximum_peg).area() < AREA_TOLERANCE,
+            f"Peg at {station} falls outside the nominal {diameter:g} mm diameter")
+    near_tip = leaf.slice(heel_height + insertion - 0.1) ^ heel
+    require((near_tip ^ minimum_peg).area() > 1, f"Peg at {station} terminates before its nominal tip")
+    require((leaf.slice(heel_height + insertion + 0.05) ^ heel).is_empty(),
+            f"Peg at {station} exceeds the nominal insertion depth")
+
     upper_z = leaf.bounding_box()[5]
     heel_gauge = (heel - cavity).extrude(upper_z + 1).translate((0, 0, heel_height + 0.005))
     require((leaf ^ heel_gauge).volume() < VOLUME_TOLERANCE,
@@ -322,35 +422,45 @@ def check_upright_drain(leaf, station, heel_height):
     lower_x, lower_y, _, upper_x, upper_y, _ = leaf.bounding_box()
     window = (CrossSection.square((upper_x - lower_x + 6, upper_y - lower_y + 6))
               .translate((lower_x - 3, lower_y - 3)))
-    witness = CrossSection.circle(0.12, 24)
-    exterior = witness.translate((lower_x - 2, lower_y - 2))
+    x, y = station
+    cavity = CrossSection.circle(3.1, 72).translate(station)
+    heel = CrossSection.circle(7.2, 72).translate(station) - cavity
+    seated_heel = heel.extrude(1).translate((0, 0, heel_height))
     underfloor = 0.85
-    channels = (window - leaf.slice(underfloor).offset(0.25)).decompose()
-    drain = Manifold.cylinder(heel_height - 0.12 - underfloor, 0.35, circular_segments=32)
-    for y in (station[1] - 4.45, station[1] + 4.45):
-        # A saddle tapers into one lip, so test the aperture near its centerline.
-        for offset in (0, -0.3, 0.3):
-            point = (station[0], y + offset)
-            if (drain.translate((*point, underfloor)) ^ leaf).volume() >= VOLUME_TOLERANCE:
-                continue
-            outlet = witness.translate(point)
-            if any(connects(channel, exterior) and connects(channel, outlet) for channel in channels):
-                break
-        else:
-            raise ValueError(f"Upright heel outlet blocked at ({station[0]:g}, {y:g})")
+    under_heel = heel_height - 0.15
+    heel_paths = (window - leaf.slice(under_heel).offset(0.07)).decompose()
+    counter_paths = (window - leaf.slice(underfloor).offset(0.25)).decompose()
+    witness = CrossSection.circle(0.08, 24)
+    exterior = witness.translate((lower_x - 2, lower_y - 2))
+    socket_drop = witness.extrude(0.5)
+    floor_drop = CrossSection.circle(0.35, 32).extrude(heel_height + 0.15 - underfloor)
+    loaded = leaf + seated_heel
+    for direction in (-1, 1):
+        inlet = (x, y + direction * 2.95)
+        outlet = (x, y + direction * 8.2)
+        require((socket_drop.translate((*inlet, under_heel)) ^ loaded).volume() < 0.0001,
+                f"Upright heel cavity at {station} cannot drain toward {direction:+d}Y")
+        require(any(connects(channel, witness.translate(inlet)) and connects(channel, witness.translate(outlet))
+                    for channel in heel_paths),
+                f"Upright heel at {station} blocks the channel toward {direction:+d}Y")
+        require((floor_drop.translate((*outlet, underfloor)) ^ loaded).volume() < VOLUME_TOLERANCE,
+                f"Upright heel outlet at {outlet} does not clear the floor")
+        require(any(connects(channel, exterior) and connects(channel, witness.translate(outlet))
+                    for channel in counter_paths),
+                f"Upright heel outlet at {outlet} cannot reach the exterior on a counter")
 
 
 def check_crown_vents(closed):
     # Test a real port from beneath and above each packed crown. Both openings must
     # clear a 0.9 mm bore so a hairline seam cannot pass the ventilation check.
-    port_heights = ((-1, 3.8, 1.25), (21.8, 2 * PIVOT[2] + 1, 2 * PIVOT[2] - 1.25))
+    port_heights = ((-1, HEEL_HEIGHT + 0.15, 1.5),
+                    (2 * PIVOT[2] - HEEL_HEIGHT - 0.15, 2 * PIVOT[2] + 1, 2 * PIVOT[2] - 1.5))
     rim_witness = CrossSection.circle(3, 32)
-    for direction in (-1, 1):
-        y = -24 - direction * 15.2
+    for direction, y in ((-1, -30.15), (1, -25.25)):
         for start, end, floor_height in port_heights:
             bore = Manifold.cylinder(end - start, 0.45, circular_segments=32)
             floor = closed.slice(floor_height)
-            positions = ((direction * x, y) for x in (26, 34))
+            positions = ((direction * x, y) for x in (26, 32))
             require(any((bore.translate((*point, start)) ^ closed).volume() < VOLUME_TOLERANCE
                         and (floor ^ rim_witness.translate(point)).area() > 4 for point in positions),
                     f"Missing packed crown vent at X sign {direction:+d}, Z={start:g}")
@@ -366,20 +476,25 @@ def main():
     hinge_shift = (0, 0, FOLDING_PIVOT_Z - PIVOT[2])
     check_hinge(base.translate(hinge_shift), lid.translate(hinge_shift))
     for leaf, station in zip((base, lid), STATIONS):
-        check_upright_mount(leaf, station, HEEL_HEIGHT)
+        check_upright_mount(leaf, station, HEEL_HEIGHT, PEG_DIAMETER, PEG_INSERTION)
         check_upright_drain(leaf, station, HEEL_HEIGHT)
-    print("Both leaves provide a ring-free peg, a supporting heel seat and two counter drains")
+    print("Both upright heel gauges seat on the floor and drain to the counter through two paths")
 
     gauge = travel_gauge()
     heads = [placement.place(gauge) for placement in PACKING_POSITIONS]
     closed = base + swing(lid, PIVOT, 180)
-    latch_region = Manifold.cube((9, 5, 5)).translate((-4.5, -45, PIVOT[2]))
-    check_enclosure(closed, heads, PACKING_POSITIONS, PACKED_ENVELOPE)
+    latch_region = Manifold.cube((9, 5, 10)).translate((-4.5, -54.4, PIVOT[2] - 5))
+    latch_projection = Manifold.cube((9, 5, 26)).translate((-4.5, -54.4, 0))
+    hinge_region = Manifold.cube((27, 8.5, 26)).translate((-13.5, -4.25, 0))
+    check_rectangular_shell(closed, SHELL_FOOTPRINT, (5, 10, 15.6, 20.6), hinge_region + latch_projection)
+    check_freestanding_pegs(closed, SHELL_FOOTPRINT, STATIONS)
+    check_enclosure(closed, heads, PACKING_POSITIONS, PACKED_ENVELOPE, SHELL_FOOTPRINT)
     check_insertion(base, lid, gauge, PACKING_POSITIONS)
     check_shaft_support(base, gauge, PACKING_POSITIONS)
     check_motion(base, lid, PIVOT, heads, latch_region)
     check_transport(closed, gauge, PACKING_POSITIONS)
     check_combined_transport(closed, gauge, PACKING_POSITIONS)
+    check_heel_pivot_transport(closed, gauge, PACKING_POSITIONS)
     check_crown_vents(closed)
 
 

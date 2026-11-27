@@ -2,15 +2,17 @@
 
 ## Folding stand with storage for two heads
 
-Lay both heads in the half with the tall guides. Point their round heads toward opposite ends of the case, with the bristles facing the nearest long outside wall. The cradles support the shafts, and the guides locate the hard backs of the heads. At the sink, open the case flat, lift the heads out and set one upright on each hidden peg. The hinge and latch print with the case.
+The case opens flat with one tapered peg on each half. At the sink, slip a head over each peg. Its heel rests directly on the floor, with two slots underneath that let water run out even on a level counter.
 
-The closed case measures **84 × 51.2 × 25.6 mm**, including the hinge and latch. Turning the crowns sideways makes it **6.4 mm thinner** than the earlier two-head travel case. The open footprint is **84 × 95.3 mm**. Slots beside the crowns vent the closed case. Outlets beneath the upright heads lead through the floor to the space between the runners.
+For travel, lay both heads in the half with the latch. Put their round ends at opposite ends of the case, with the bristles facing inward. The shaped inside edges support the hard shafts and crown backs, leaving the middle of each half clear. Fold the lid shut until the latch catches.
 
-![Storage variant with two brush heads packed for travel, standing at the sink, and the case closed](renders/Storage-stand.png)
+![Rectangular stand open and empty, with one short peg per half. Below, the two heads are packed side by side, and the case is shown closed.](renders/Storage-stand.png)
 
-Print the [storage stand STL](exports/Storage-stand.stl) as one object, flat open, runners down and pegs up. Use the supplied orientation at 100% scale in millimeters, with supports and brim off. To edit the design, keep the [storage model](model/Storage-stand.scad), [folding model](model/Folding-stand.scad) and [compact stand model](model/Compact-stand.scad) together in the same directory. Export the storage model's `open` view for printing.
+The straight-sided shell measures **79.2 × 47.1 mm**, with a 2.4 mm radius at the corners. Including the captive hinge and latch, the closed case measures **79.2 × 57.1 × 25.6 mm**. The open footprint is **79.2 × 105.6 mm**. Through-slots beside the bristles vent both faces of the closed case.
 
-Bambu Studio 2.8.2.61 estimated **1 hr 21 min and 32.07 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill. Let the plate cool before lifting the case and gently folding it for the first time.
+Print the [storage stand STL](exports/Storage-stand.stl) as one object, flat open with the pegs up. Keep the supplied orientation at 100% scale in millimeters, with supports and brim off. Let the plate cool before lifting the case and gently folding it for the first time. To adjust the peg diameter or insertion depth, open the [storage model](model/Storage-stand.scad) with the other files in the same model directory, then export its `open` view.
+
+Bambu Studio 2.8.2.61 estimated **1 hr 23 min and 36.37 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill.
 
 The provisional fit target for each classic Oral-B Pro CrossAction head is 74 mm overall, with a 14.4 mm heel and a 17 mm round crown measuring 22 mm from back to bristle tips. The [storage geometry check](scripts/check_storage_stand.py) uses two solid gauges of that shape. Actual brush fit, hinge release and retention in a travel bag still need a physical trial.
 
