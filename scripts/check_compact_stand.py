@@ -43,6 +43,12 @@ def check_pegs(stand):
     for x in STATIONS:
         toe = CrossSection.circle(7.2, 72).translate((x, 0))
         inner = CrossSection.circle(5.1, 72).translate((x, 0))
+        # A loose pin also fits the hollow gauge. Check locating diameter on both sides of nominal.
+        peg_seat = stand.slice(HEEL_SEAT + 0.01) ^ toe
+        minimum_peg = CrossSection.circle(2.75, 72).translate((x, 0))
+        maximum_peg = CrossSection.circle(2.85, 72).translate((x, 0))
+        require((minimum_peg - peg_seat).area() < 0.001 and (peg_seat - maximum_peg).area() < 0.001,
+                f"Peg at X={x} falls outside the 5.6 ± 0.1 mm locating diameter")
         contact = stand.slice(HEEL_SEAT - 0.01) ^ (toe - inner)
         require(len(contact.decompose()) == 3, f"Heel rim at X={x} needs three independent supports")
         require(support_margin(contact, (x, 0)) > 2, f"Heel rim at X={x} cannot carry a centered head")
