@@ -20,6 +20,8 @@ STATIONS = ((-10, -27.7), (10, 27.7))
 HEEL_HEIGHT = 2.0
 PEG_DIAMETER = 5.6
 PEG_INSERTION = 7.0
+HINGE_RADIAL_PLAY = 0.55
+HINGE_AXIAL_PLAY = 0.55
 SHELL_FOOTPRINT = ((-39.6, -51.25), (39.6, -4.15))
 PACKED_ENVELOPE = (80, 58, 26)
 
@@ -229,6 +231,43 @@ def check_motion(base, lid, pivot, heads, latch_region):
         print(f"Head sweep clearance proved between samples except for {sampled_only} intervals under 0.0625°")
     else:
         print("Head clearance is bounded across every interval of the closing sweep")
+
+
+def check_latch_retention(base, lid, pivot, latch_region):
+    fixed_latch = base ^ latch_region
+    slip = np.array((0, 0.38, 0.38))
+    fractions = [step / 20 for step in range(21)]
+    # Slide in the hinge play while closed, swing 2°, then restore the axis and keep opening.
+    opening_path = ([(180, fraction * slip) for fraction in fractions]
+                    + [(180 - step / 20, slip) for step in range(1, 41)]
+                    + [(178, fraction * slip) for fraction in reversed(fractions)]
+                    + [(178 - step / 4, (0, 0, 0)) for step in range(1, 53)])
+    require(any((fixed_latch ^ swing(lid, pivot, angle).translate(offset)).volume() > VOLUME_TOLERANCE
+                for angle, offset in opening_path),
+            "Rigid latch can open after the hinge shifts +0.38 mm in Y and Z")
+
+    # Each eroded patch is present for every translation in a Y/Z cell and
+    # across the axial play interval. This bound keeps the hinge axes parallel.
+    cell = 0.1
+    half = cell / 2
+    extent = int(np.ceil(HINGE_RADIAL_PLAY / cell))
+    coordinates = [index * cell for index in range(-extent, extent + 1)]
+    offsets = [(0, y, z) for y in coordinates for z in coordinates
+               if np.hypot(max(abs(y) - half, 0), max(abs(z) - half, 0)) <= HINGE_RADIAL_PLAY + 1e-9]
+    kernel = Manifold.cube((2 * HINGE_AXIAL_PLAY, cell, cell), center=True)
+    lower = np.asarray(latch_region.bounding_box()[:3]) - 1
+    upper = np.asarray(latch_region.bounding_box()[3:]) + 1
+    capture = Manifold.cube(upper - lower).translate(lower)
+    for angle in np.arange(179.875, 165, -0.125):
+        patch = swing(lid, pivot, angle) ^ capture
+        eroded = patch.minkowski_difference(kernel)
+        require(eroded.status() == Error.NoError, "Could not bound latch contact across hinge play")
+        minimum_overlap = min((fixed_latch ^ eroded.translate(offset)).volume() for offset in offsets)
+        if minimum_overlap > VOLUME_TOLERANCE:
+            print(f"Latch at {angle:g}° retains at least {minimum_overlap:.3f} mm³ of overlap "
+                  f"across {HINGE_RADIAL_PLAY:g} mm radial and ±{HINGE_AXIAL_PLAY:g} mm axial hinge play")
+            return
+    raise ValueError("No tested latch angle blocks rigid opening across the modeled radial and axial hinge play")
 
 
 def bristle_tips(gauge):
@@ -492,6 +531,7 @@ def main():
     check_insertion(base, lid, gauge, PACKING_POSITIONS)
     check_shaft_support(base, gauge, PACKING_POSITIONS)
     check_motion(base, lid, PIVOT, heads, latch_region)
+    check_latch_retention(base, lid, PIVOT, latch_region)
     check_transport(closed, gauge, PACKING_POSITIONS)
     check_combined_transport(closed, gauge, PACKING_POSITIONS)
     check_heel_pivot_transport(closed, gauge, PACKING_POSITIONS)

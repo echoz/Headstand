@@ -2,13 +2,13 @@
 
 ## Folding stand with storage for two heads
 
-The case opens flat with one tapered peg on each half. At the sink, slip a head over each peg. Its heel rests directly on the floor, with two slots underneath that let water run out even on a level counter.
+Pull the thumb tab outward and open the case flat. At the sink, slip each head over the tapered peg on its half. Its heel rests directly on the floor, with two slots underneath that let water run out even on a level counter.
 
 For travel, lay both heads in the half with the latch. Put their round ends at opposite ends of the case, with the bristles facing inward. The shaped inside edges support the hard shafts and crown backs, leaving the middle of each half clear. Fold the lid shut until the latch catches.
 
 ![Rectangular stand open and empty, with one short peg per half. Below, the two heads are packed side by side, and the case is shown closed.](renders/Storage-stand.png)
 
-The straight-sided shell measures **79.2 × 47.1 mm**, with a 2.4 mm radius at the corners. Including the captive hinge and latch, the closed case measures **79.2 × 57.1 × 25.6 mm**. The open footprint is **79.2 × 105.6 mm**. Through-slots beside the bristles vent both faces of the closed case.
+The straight-sided shell measures **79.2 × 47.1 mm**, with a 2.4 mm radius at the corners. Including the captive hinge and latch, the closed case measures **79.2 × 57.1 × 25.6 mm**. The open footprint is **79.2 × 105.95 mm**. Through-slots beside the bristles vent both faces of the closed case.
 
 Print the [storage stand STL](exports/Storage-stand.stl) as one object, flat open with the pegs up. Keep the supplied orientation at 100% scale in millimeters, with supports and brim off. Let the plate cool before lifting the case and gently folding it for the first time. To adjust the peg diameter or insertion depth, open the [storage model](model/Storage-stand.scad) with the other files in the same model directory, then export its `open` view.
 

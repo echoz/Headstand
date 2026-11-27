@@ -154,12 +154,21 @@ module bearing_mount(base) {
 }
 
 module storage_latch(base) {
-    lift = axis_z-7.2;
-    translate([0,near_wall+25,lift]) if(base) spring_clip(); else catch_ridge();
-    if(base)
-        yz_prism(-3.53,7.06)
-            polygon([[near_wall+1.1,0],[near_wall-0.95,0],[near_wall-2,1.05],
-                     [near_wall-2.035,lift+0.25],[near_wall+1.1,lift+0.5]]);
+    // The hook captures 1.01 mm of the catch before edge rounding. Its free
+    // arm starts near the sole so it can flex past the catch during closing.
+    translate([0,near_wall+25,0])
+        if(base) front_latch_section(7,[
+            [-0.95,0],[1.7,0],[2.16,0.46],[2.16,15.40],[2.30,15.54],
+            [2.30,16.62],[1.12,16.78],[0.14,15.90],[0.14,15.45],
+            [1.30,14.29],[1.30,3.05],[-0.35,1.40],[-0.95,1.40]
+        ]);
+        else {
+            // Dimensions here use the closed case so the two 45-degree faces
+            // and their 0.31 mm vertical clearance can be read together.
+            catch = [[-0.35,13.00],[0,13.00],[1.15,13.93],
+                     [1.15,14.13],[0,15.28],[-0.35,15.28]];
+            front_latch_section(7.8,[for(point=catch) [point.x,2*axis_z-point.y]]);
+        }
 }
 
 module leaf_storage(base) {
