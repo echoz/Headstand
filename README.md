@@ -1,16 +1,40 @@
 # Headstand
 
-## Folding peg case · design concept
+## Folding stand with storage for two heads
 
-Open the case all the way and set it on the counter. The hinge stops at **180°**, placing both halves side by side at the same height. Three low rails under each half support its brush head and raise the underside **1 mm** above the counter. The open footprint is **53.1 × 33 mm**.
+Slip a fingernail into the shallow recess at the center of the front seam and lift the lid. The hidden snap releases as the two spring arms spread behind the front wall. Open the case flat and set each head on the centered peg in its half. Two matching slots run lengthwise from beneath the heel. Each continues under the floor to an outlet in the nearest short end, so water has a path out on a level counter.
 
-Set each head over a hidden peg. Three small pads support its heel. Shallow grooves slope from beneath the heel to outlets on either side of the case. To pack up, lift off the heads and fold the two halves together until the front latch catches. The empty pegs nest inside the **33 × 29.7 × 16.4 mm** case. Carry the heads separately.
+For travel, lay both heads in the half with the two spring arms. Put their round ends at opposite ends of the case, with the bristles facing inward. The shaped inside edges support the hard shafts and crown backs. Press the lid closed until the snap engages.
 
-The fit target is the classic Oral-B Pro CrossAction head. The 5.6 mm peg diameter and 7 mm insertion depth are adjustable design assumptions. The manufacturer identifies the brush-head family. Fit on actual heads and latch feel remain unverified. [Oral-B Pro brush heads](https://oralb.com/en-us/products/replacement-brush-heads/non-io-brush-heads/)
+![Closed rectangular case with a flush front and a centered fingernail recess. Below are the open case and a close-up of its internal snap.](renders/Storage-stand.png)
+
+The straight-sided shell measures **79.2 × 47.1 mm**, with a 2.4 mm radius at the corners. Including the rear hinge, the closed case measures **79.2 × 54.8 × 25.6 mm**. The open footprint is **79.2 × 102.5 mm**. Each slot is **23.2 × 2.4 mm** with the default peg. Its outer end also vents the bristles when the heads are packed.
+
+Print the [storage stand STL](exports/Storage-stand.stl) as one object, flat open with the pegs up. Keep the supplied orientation at 100% scale in millimeters, with supports and brim off. Let the plate cool before lifting the case and gently folding it for the first time. To adjust the peg diameter or insertion depth, open the [storage model](model/Storage-stand.scad) with the other files in the same model directory, then export its `open` view.
+
+Bambu Studio 2.8.2.61 estimated **1 hr 21 min 53 sec and 36.55 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill.
+
+The provisional fit target for each classic Oral-B Pro CrossAction head is 74 mm overall, with a 14.4 mm heel and a 17 mm round crown measuring 22 mm from back to bristle tips. The [storage geometry check](scripts/check_storage_stand.py) uses two solid gauges of that shape. Actual brush fit, first hinge movement, snap opening force and durability in a travel bag still need a physical trial.
+
+## Print-in-place folding peg case
+
+Print the [folding stand STL](exports/Folding-stand.stl) to make the assembled case in one run. Open the two halves flat and place them on the counter. Three low rails under each half support its brush head and raise the underside **1 mm** above the counter. The open footprint is **53.1 × 33 mm**.
+
+Set each head over a hidden peg. Three small pads support its heel. Shallow grooves slope from beneath the heel to outlets on either side of the case. To pack up, lift off the heads and fold the two halves together until the front latch catches. The empty pegs nest inside the **33 × 30.9 × 16.4 mm** case. Carry the heads separately.
+
+The pegs target classic Oral-B Pro CrossAction heads. Their 5.6 mm diameter and 7 mm insertion depth are adjustable. Actual fit, first hinge movement and latch feel still need a physical print. [Oral-B Pro brush heads](https://oralb.com/en-us/products/replacement-brush-heads/non-io-brush-heads/)
 
 ![The level stand with one brush head mounted, the case closed for travel, and a side view showing both halves level above the counter](renders/Folding-stand.png)
 
-Use the `open` and `closed` views in the [editable OpenSCAD concept](model/Folding-stand.scad).
+Import the entire STL as one object at 100% scale in millimeters. Keep the supplied orientation with the case open, runners down and pegs up. Turn off supports and brim to keep the hinge clear. Once the plate has cooled, lift the stand by both halves and gently start the first fold by hand.
+
+Bambu Studio 2.8.2.61 estimated **29 min 54 sec and 7.97 g** on an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill.
+
+The base carries a 3.1 mm axle. The lid prints with two closed loops around it and 0.55 mm of nominal clearance. When the stand sits level, the stops have a small gap so they can print apart. Off the counter, they meet about 5° past flat.
+
+Use the `open` and `closed` views in the [editable OpenSCAD model](model/Folding-stand.scad). To export a replacement STL after adjusting the pegs, render and export the entire `open` view.
+
+Run `python3 scripts/check_folding_stand.py` with NumPy and manifold3d installed to check the default STL. The [geometry check](scripts/check_folding_stand.py) measures the print gap and checks that each bearing encloses the axle, both heads have support and the four side drains are open.
 
 ## Compact peg stand
 
