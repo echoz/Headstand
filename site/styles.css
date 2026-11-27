@@ -369,6 +369,14 @@ h1 span {
     outline-offset: 2px;
   }
 
+  @media (forced-colors: active) {
+    .view-controls input:checked + span {
+      text-decoration: underline;
+      text-decoration-thickness: 0.15em;
+      text-underline-offset: 0.25em;
+    }
+  }
+
   .product-view figcaption {
     position: absolute;
     inset-block-end: 0.8rem;
