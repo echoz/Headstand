@@ -6,15 +6,15 @@
 
 Slip a fingernail into the shallow recess at the center of the front seam and lift the lid. The hidden snap releases as the two spring arms spread behind the front wall. Open the case flat and set each head on the centered peg in its half. Two matching slots run lengthwise from beneath the heel. Each continues under the floor to an outlet in the nearest short end, so water has a path out on a level counter.
 
-For travel, lay both heads in the half with the two spring arms. Put their round ends at opposite ends of the case, with the bristles facing inward. The shaped inside edges support the hard shafts and crown backs. Press the lid closed until the snap engages.
+For travel, lay both heads in the half with the two spring arms. The floor curves up along each shaft and widens into a shallow pocket behind the hard back of the round head. Put the round ends at opposite ends of the case, bristles facing inward, and press the lid until the snap engages.
 
-![Closed rectangular case with a flush front and a centered fingernail recess. Below are the open case and a close-up of its internal snap.](renders/Storage-stand.png)
+![Close-up of the open case with sculpted brush pockets, a center peg, two drain slots and a hidden snap inside the front wall.](renders/Storage-stand.png)
 
 The straight-sided shell measures **79.2 × 47.1 mm**, with a 2.4 mm radius at the corners. Including the rear hinge, the closed case measures **79.2 × 54.8 × 25.6 mm**. The open footprint is **79.2 × 102.5 mm**. Each slot is **23.2 × 2.4 mm** with the default peg. Its outer end also vents the bristles when the heads are packed.
 
 Print the [storage stand STL](exports/Storage-stand.stl) as one object, flat open with the pegs up. Keep the supplied orientation at 100% scale in millimeters, with supports and brim off. Let the plate cool before lifting the case and gently folding it for the first time. To adjust the peg diameter or insertion depth, open the [storage model](model/Storage-stand.scad) with the other files in the same model directory, then export its `open` view.
 
-Bambu Studio 2.8.2.61 estimated **1 hr 21 min 53 sec and 36.55 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill.
+Bambu Studio 2.8.2.61 estimated **1 hr 27 min 9 sec and 37.59 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill.
 
 The provisional fit target for each classic Oral-B Pro CrossAction head is 74 mm overall, with a 14.4 mm heel and a 17 mm round crown measuring 22 mm from back to bristle tips. The [storage geometry check](scripts/check_storage_stand.py) uses two solid gauges of that shape. Actual brush fit, first hinge movement, snap opening force and durability in a travel bag still need a physical trial.
 

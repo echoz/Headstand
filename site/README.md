@@ -4,7 +4,7 @@ This static page introduces the [folding stand with storage for two heads](../RE
 
 - `index.html` contains the product views, instructions, and links.
 - `styles.css` owns the responsive layout and the gallery. The gallery uses native radio controls and CSS. Browsers without CSS `:has()` display the views in sequence.
-- `assets/` contains four Blender renders from the two connected leaves of [Storage-stand.stl](../exports/Storage-stand.stl). The closed view rotates the lid 180 degrees about the hinge. The brush heads are illustrative. The renders do not measure fit.
+- `assets/` contains the sculpted interior, closed case, packed heads, upright heads and drainage views. The interior views use the [current STL](../exports/Storage-stand.stl). The closed view shows the same rectangular exterior. The brush heads are illustrative.
 
 To preview locally, run these commands from the repository root with Python 3. Choose a new output directory for each build.
 
@@ -19,4 +19,4 @@ Open [the local preview](http://127.0.0.1:8000/). Staging copies the page and it
 - `downloads/Storage-stand.stl` from the current checked-in export
 - `downloads/Headstand-OpenSCAD.zip` with `Storage-stand.scad` and its `Folding-stand.scad` dependency
 
-Check the three gallery options with pointer and keyboard, the two local navigation targets, both downloads, and the layout on mobile and desktop. Changing the printable candidate also requires checking the renders, dimensions, print settings, and physical-trial status against the new candidate.
+Check the four gallery options with pointer and keyboard, the two local navigation targets, both downloads, and the layout on mobile and desktop. Changing the printable candidate also requires checking the renders, dimensions, print settings, and physical-trial status against the new candidate.
