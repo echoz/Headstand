@@ -1,0 +1,13 @@
+# macOS metadata, Python environments and caches
+.DS_Store
+._*
+.venv*/
+__pycache__/
+*.py[cod]
+
+# Blender backups and machine-specific slicer output
+*.blend[0-9]*
+*.gcode
+*.gcode.3mf
+*.bgcode
+/result.json
