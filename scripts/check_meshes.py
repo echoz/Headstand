@@ -19,8 +19,9 @@ def require(condition, problem):
         raise ValueError(problem)
 
 
-def read_solid(filename):
-    data = (EXPORTS / filename).read_bytes()
+def read_mesh(path):
+    filename = path.name
+    data = path.read_bytes()
     require(len(data) >= 84, f"{filename}: incomplete STL header")
     count = struct.unpack_from("<I", data, 80)[0]
     require(len(data) == 84 + 50 * count, f"{filename}: invalid binary STL size")
@@ -37,6 +38,11 @@ def read_solid(filename):
     require(np.all(uses == 2), f"{filename}: open or nonmanifold edge")
     solid = Manifold(Mesh(np.ascontiguousarray(vertices), faces))
     require(solid.status() == Error.NoError, f"{filename}: {solid.status()}")
+    return solid, count
+
+
+def read_solid(filename):
+    solid, count = read_mesh(EXPORTS / filename)
     require(solid.volume() > 0 and len(solid.decompose()) == 1, f"{filename}: expected one solid")
     require(abs(solid.bounding_box()[2]) < 0.005, f"{filename}: sole must sit at Z=0")
     print(f"{filename}: {count} facets, one manifold solid, {solid.volume() / 1000:.2f} cm³")

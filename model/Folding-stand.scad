@@ -1,5 +1,5 @@
 // Pocket stand for two classic Oral-B heads. Dimensions in millimetres.
-// Base and lid use their open assembly coordinates, with the runners on Z=0.
+// Print the open assembly with the runners on Z=0. Base and lid isolate its moving parts.
 part = "open"; // [open, closed, base, lid]
 
 /* [Brush fit] */
@@ -13,17 +13,19 @@ $fn = 80;
 eps = 0.025;
 span = 33;
 front = 25;
-back = 2.7;
+back = 4.15;
 corner = 4.8;
 wall = 1.6;
 deck = 2;
 runner_height = 1;
 pad_lift = 0.8;
 axis_z = 7.2;
-pin_bore = 2.25;
-barrel_r = 2.35;
+axle_r = 1.55;
+bearing_clearance = 0.55;
+barrel_r = 3.55;
 hinge_span = 27;
-knuckle_gap = 0.45;
+knuckle_gap = 0.55;
+knuckle_length = (hinge_span - 4*knuckle_gap)/5;
 station = [-4.2, -14];
 
 assert(peg_diameter >= 4 && peg_diameter <= 7);
@@ -113,31 +115,52 @@ module yz_prism(x, length) {
             linear_extrude(height = length) children();
 }
 
-module knuckle(index) {
-    length = (hinge_span - 2*knuckle_gap)/3;
-    start = -hinge_span/2 + index*(length + knuckle_gap);
-    bore_r = pin_bore/2;
-    yz_prism(start, length)
-        difference() {
-            hull() {
-                translate([0, axis_z]) circle(r = barrel_r);
-                // Bottom of the web grows out from the rim at about 45 degrees.
-                translate([-back - 0.7, 1.2]) square([0.55, axis_z - 3.05]);
+module hinge_web() {
+    // Continue the rear runner out to the 45-degree tangent under the barrel.
+    tangent_y = barrel_r*sqrt(2) - axis_z - runner_height;
+    hull() {
+        translate([0, axis_z]) circle(r = barrel_r);
+        polygon([[station.y+8, -runner_height], [tangent_y, -runner_height],
+                 [-back-0.7, axis_z-1.8]]);
+    }
+}
+
+module bearing_bore() {
+    // Tangents above the circular bearing form a 45-degree roof with a short flat.
+    bore_r = axle_r + bearing_clearance;
+    roof_flat = 0.8;
+    translate([0, axis_z]) hull() {
+        circle(r = bore_r);
+        translate([-roof_flat/2, bore_r*sqrt(2)-roof_flat/2-eps])
+            square([roof_flat, eps]);
+    }
+}
+
+module hinge(is_base) {
+    // Three solid base webs anchor the axle on each side of both closed lid eyes.
+    for (i = is_base ? [0, 2, 4] : [1, 3])
+        yz_prism(-hinge_span/2 + i*(knuckle_length+knuckle_gap), knuckle_length)
+            difference() {
+                hinge_web();
+                if (!is_base) bearing_bore();
             }
-            translate([0, axis_z]) hull() {
-                circle(r = bore_r);
-                polygon([[-bore_r/sqrt(2), bore_r/sqrt(2)],
-                         [0, bore_r*sqrt(2)], [bore_r/sqrt(2), bore_r/sqrt(2)]]);
+    if (is_base)
+        yz_prism(-hinge_span/2, hinge_span)
+            translate([0, axis_z]) intersection() {
+                circle(r = axle_r);
+                // A 1.33 mm flat starts the two 6.06 mm bridges between webs.
+                translate([-axle_r, -1.4]) square([2*axle_r, 2*axle_r]);
             }
-        }
 }
 
 module opening_stops() {
-    // The two pairs of faces meet at y=0 when the leaves share the counter plane.
+    // Raked faces have a print gap at level and meet 5.2 degrees past flat.
+    function stop_y(z) = (z-axis_z)*tan(2.6);
     for (x = [-8.8, 8.8])
         yz_prism(x - 1.7, 3.4)
-            polygon([[-back - 1, 0], [-0.4, 0], [0, 0.4],
-                     [0, 2.15], [-back, 2.85], [-back - 1, 2.85]]);
+            polygon([[station.y+8, -runner_height], [stop_y(-0.5)-0.5, -runner_height],
+                     [stop_y(-0.5), -0.5], [stop_y(1.4), 1.4],
+                     [-back-0.25, 2.85], [station.y+8, 2.85]]);
 }
 
 module front_latch_section(width, points) {
@@ -167,7 +190,7 @@ module leaf(is_base) {
         shell();
         runners();
         opening_stops();
-        for (i = is_base ? [0, 2] : [1]) knuckle(i);
+        hinge(is_base);
         translate(station) brush_station();
         if (is_base) spring_clip();
         else catch_ridge();
