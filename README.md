@@ -1,5 +1,7 @@
 # Headstand
 
+[Visit the Headstand website for the design views, print settings and downloads.](https://echoz.github.io/Headstand/)
+
 ## Folding stand with storage for two heads
 
 Slip a fingernail into the shallow recess at the center of the front seam and lift the lid. The hidden snap releases as the two spring arms spread behind the front wall. Open the case flat and set each head on the centered peg in its half. Two matching slots run lengthwise from beneath the heel. Each continues under the floor to an outlet in the nearest short end, so water has a path out on a level counter.

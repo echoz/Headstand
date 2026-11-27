@@ -11,3 +11,4 @@ __pycache__/
 *.gcode.3mf
 *.bgcode
 /result.json
+/_site/
