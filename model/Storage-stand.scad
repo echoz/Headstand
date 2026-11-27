@@ -18,8 +18,6 @@ corner = 2.4;
 wall = 1.6;
 floor_z = 2.0;
 near_wall = case_y - width/2;
-base_peg = [-10,case_y];
-lid_peg = [10,case_y];
 lane = 14.45;
 
 assert(peg_diameter >= 4 && peg_diameter <= 6.2);
@@ -36,32 +34,28 @@ module head_frame(sign) {
         rotate([0,0,sign==1 ? 0 : 180]) children();
 }
 
-module sole_slot(x, y, length, diameter) {
-    hull() for(dy=[-length/2,length/2])
-        translate([x,y+dy,-eps]) cylinder(d=diameter,h=floor_z+2*eps);
+module water_passages() {
+    slot_radius = 1.2;
+    heel_inlet = peg_diameter/2 + 0.04;
+    crown_end = 26;
+    outlet_start = crown_end-slot_radius;
+    for(turn=[0,180]) translate([0,case_y,0]) rotate([0,0,turn]) {
+        // The same opening crosses the upright heel rim and the packed tuft bay.
+        hull() for(x=[heel_inlet+slot_radius,outlet_start])
+            translate([x,0,-eps]) cylinder(r=slot_radius,h=floor_z+2*eps);
+
+        // The counter closes the bottom of this passage. Its sloped sides leave
+        // only a 1.2 mm bridge at the roof of the outlet.
+        yz_prism(outlet_start,length/2-outlet_start+eps)
+            polygon([[-1.6-eps,-eps],[1.6+eps,-eps],[0.6,1],[-0.6,1]]);
+    }
 }
 
-module water_passages(station) {
-    // Short through-slots beneath the hollow heel also cross its seating rim.
-    for(sign=[-1,1])
-        sole_slot(station.x,station.y+sign*6.05,5.5,2);
-    for(sign=[-1,1]) head_frame(sign)
-        for(x=[26,32]) sole_slot(x,-12,5,2);
-
-    // Shallow channels across the sole drain on a level counter. The narrow
-    // roofs bridge between solid bed-contact areas with the supports off.
-    for(x=[station.x,-32,-26,26,32])
-        translate([x,case_y,0]) hull()
-            for(level=[[-eps,3.4],[1,1.4]])
-                translate([0,0,level.x]) linear_extrude(height=eps)
-                    square([level.y,width+1],center=true);
-}
-
-module storage_station(station) {
+module storage_station() {
     radius = peg_diameter/2;
     shoulder = radius-0.8;
     nose = min(1.2,shoulder-0.45);
-    translate([station.x,station.y,floor_z]) rotate_extrude()
+    translate([0,case_y,floor_z]) rotate_extrude()
         polygon(concat([[0,-eps],[radius,-eps],[radius,0]],
             [for(a=[0:10:90])
                 [shoulder-nose+nose*cos(a),peg_insertion-nose+nose*sin(a)]],
@@ -124,7 +118,7 @@ module packing_wall(front_lid) {
     ]);
 }
 
-module shell(base,station) {
+module shell(base) {
     difference() {
         union() {
             difference() {
@@ -132,9 +126,9 @@ module shell(base,station) {
                 translate([0,0,floor_z]) linear_extrude(height=axis_z) outline(wall);
             }
             for(sign=[-1,1]) head_frame(sign) packing_wall(!base && sign==-1);
-            storage_station(station);
+            storage_station();
         }
-        water_passages(station);
+        water_passages();
     }
 }
 
@@ -173,7 +167,7 @@ module storage_latch(base) {
 
 module leaf_storage(base) {
     union() {
-        shell(base,base ? base_peg : lid_peg);
+        shell(base);
         bearing_mount(base);
         storage_latch(base);
     }
