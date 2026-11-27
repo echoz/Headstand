@@ -19,6 +19,7 @@ wall = 1.6;
 floor_z = 2.0;
 near_wall = case_y - width/2;
 lane = 14.45;
+latch_x = -13;
 
 assert(peg_diameter >= 4 && peg_diameter <= 6.2);
 assert(peg_insertion >= 4 && peg_insertion <= 7.2);
@@ -119,6 +120,8 @@ module packing_wall(front_lid) {
 }
 
 module shell(base) {
+    pocket_half_width = base ? 7.6 : 8.4;
+    pocket_inset = base ? 1.50 : 1.27;
     difference() {
         union() {
             difference() {
@@ -129,6 +132,12 @@ module shell(base) {
             storage_station();
         }
         water_passages();
+        // Free the springs from the shaft fillet while preserving the outside skin
+        // and the sloping brush support on the inboard side of the pocket.
+        translate([latch_x-pocket_half_width,near_wall+pocket_inset,base ? floor_z : 5.8])
+            cube([2*pocket_half_width,4.75-pocket_inset,axis_z]);
+        if(base)
+            translate([0,near_wall-0.35,axis_z]) scale([8.8,1.15,2.15]) sphere(r=1);
     }
 }
 
@@ -147,22 +156,31 @@ module bearing_mount(base) {
                      [-5.95,3.85],[-7.35,3.85]]);
 }
 
+// Extrude an X,Z profile parallel to the front wall, easing the cam edges.
+module latch_profile(inset, depth, points) {
+    translate([latch_x,near_wall+inset+depth,0]) rotate([90,0,0])
+        linear_extrude(height=depth)
+            offset(r=0.18,$fn=24) offset(delta=-0.18) polygon(points);
+}
+
 module storage_latch(base) {
-    // The hook captures 1.01 mm of the catch before edge rounding. Its free
-    // arm starts near the sole so it can flex past the catch during closing.
-    translate([0,near_wall+25,0])
-        if(base) front_latch_section(7,[
-            [-0.95,0],[1.7,0],[2.16,0.46],[2.16,15.40],[2.30,15.54],
-            [2.30,16.62],[1.12,16.78],[0.14,15.90],[0.14,15.45],
-            [1.30,14.29],[1.30,3.05],[-0.35,1.40],[-0.95,1.40]
-        ]);
-        else {
-            // Dimensions here use the closed case so the two 45-degree faces
-            // and their 0.31 mm vertical clearance can be read together.
-            catch = [[-0.35,13.00],[0,13.00],[1.15,13.93],
-                     [1.15,14.13],[0,15.28],[-0.35,15.28]];
-            front_latch_section(7.8,[for(point=catch) [point.x,2*axis_z-point.y]]);
-        }
+    if(base) {
+        // The tines spread lengthwise, parallel to the shaft, as the keeper
+        // passes between them. Both contact faces are ramps for pull-to-open.
+        tine = [[2.49,floor_z-0.5],[6.16,floor_z-0.5],[6.16,2.01],[5.84,2.13],
+                [5.59,2.33],[5.43,2.59],[5.35,2.93],[5.35,17.90],[4.95,18.30],[3.50,18.30],
+                [1.90,16.70],[1.90,16.20],[3.30,14.80],
+                [3.30,2.93],[3.22,2.59],[3.06,2.33],[2.81,2.13],[2.49,2.01]];
+        for(side=[-1,1])
+            latch_profile(2.35,1.35,[for(p=tine) [side*p.x,p.y]]);
+    } else {
+        // Closed Z coordinates make the 1.10 mm engagement at each tooth
+        // explicit. The narrow rib joins the keeper to the lid floor and wall.
+        keeper = [[-1.45,12.98],[1.45,12.98],[3.00,14.36],[3.00,14.66],
+                  [1.02,16.64],[1.02,2*axis_z-floor_z+0.5],
+                  [-1.02,2*axis_z-floor_z+0.5],[-1.02,16.64],[-3.00,14.66],[-3.00,14.36]];
+        latch_profile(1.17,2.53,[for(p=keeper) [p.x,2*axis_z-p.y]]);
+    }
 }
 
 module leaf_storage(base) {

@@ -25,6 +25,9 @@ SLOT_WIDTH = 2.4
 CROWN_PORT_X = 24.5
 HINGE_RADIAL_PLAY = 0.55
 HINGE_AXIAL_PLAY = 0.55
+TINE_ROOT_HEIGHT = 3.5
+TINE_CREST_HEIGHT = 16.6
+TINE_RELEASE_SPREAD = 1.25
 SHELL_FOOTPRINT = ((-39.6, -51.25), (39.6, -4.15))
 PACKED_ENVELOPE = (80, 58, 26)
 
@@ -130,32 +133,47 @@ def rounded_rectangle(bounds, radius):
     return CrossSection.square(size, center=True).offset(radius, circular_segments=64).translate(center)
 
 
-def check_rectangular_shell(closed, bounds, wall_levels, hardware):
-    lower, upper = np.asarray(bounds)
+def check_rectangular_shell(closed, bounds, wall_levels, hinge_region):
     tolerance = 0.08  # Clear of the polygonal outline and STL boundary.
-    outline = CrossSection.square(upper - lower).translate(lower)
+    maximum_outline = rounded_rectangle(bounds, 1).offset(tolerance)
     bottom = closed.bounding_box()[2] - 1
     height = closed.bounding_box()[5] - bottom + 1
-    rectangular_prism = outline.offset(tolerance).extrude(height).translate((0, 0, bottom))
-    require((closed - (rectangular_prism + hardware)).volume() < VOLUME_TOLERANCE,
-            "Shell projects outside the rectangular footprint beyond the hinge and catch")
+    shell_prism = maximum_outline.extrude(height).translate((0, 0, bottom))
+    require((closed - (shell_prism + hinge_region)).volume() < VOLUME_TOLERANCE,
+            "Shell projects past the flush rectangular outline outside the rear hinge")
 
     # The two contours bound the corner radius while requiring material right
     # along each straight wall. Floor ports and internal supports are out of band.
-    maximum_outline = rounded_rectangle(bounds, 1).offset(tolerance)
     minimum_outline = rounded_rectangle(bounds, 2.5)
     perimeter = minimum_outline.offset(-tolerance) - minimum_outline.offset(-0.3)
     for level in wall_levels:
         shell = closed.slice(level)
-        local_hardware = hardware.slice(level)
-        require((shell - maximum_outline - local_hardware).area() < AREA_TOLERANCE,
-                f"Exterior corners are too sharp at Z={level:g} mm")
-        require((perimeter - shell - local_hardware).area() < AREA_TOLERANCE,
+        require((perimeter - shell - hinge_region.slice(level)).area() < AREA_TOLERANCE,
                 f"Exterior does not have four straight walls with small corners at Z={level:g} mm")
-    print("Four straight exterior walls and small corner radii on both halves, with local hinge and catch exceptions")
+    print("Four straight exterior walls and small corner radii on both halves, with a rear hinge exception")
 
 
-def check_freestanding_pegs(closed, footprint, stations):
+def check_front_release(closed, bounds, seam_height):
+    (left, front), (right, _) = bounds
+    grip_bottom = seam_height - 1.05
+    # The central recess admits a fingernail gauge over a useful width and has a solid backing.
+    nail_space = Manifold.cube((6, 0.55, 0.6)).translate((-3, front - 0.1, grip_bottom))
+    require((closed ^ nail_space).volume() < VOLUME_TOLERANCE,
+            "Front seam lacks a shallow fingernail recess")
+    backing = Manifold.cube((6, 0.35, 0.6)).translate((-3, front + 0.9, grip_bottom))
+    require((backing - closed).volume() < VOLUME_TOLERANCE,
+            "The fingernail recess breaks through the front wall")
+
+    lower_rim = ((left + 3, -9.5, grip_bottom), (9.5, right - 3, grip_bottom))
+    upper_rim = ((left + 3, right - 3, seam_height + 0.45),)
+    for start, end, level in lower_rim + upper_rim:
+        wall = Manifold.cube((end - start, 0.2, 0.45)).translate((start, front + 0.08, level))
+        require((wall - closed).volume() < VOLUME_TOLERANCE,
+                "The front walls step inward away from the release recess")
+    print("Recess accepts a shallow fingernail gauge with solid backing and flush neighboring rims")
+
+
+def check_freestanding_pegs(closed, footprint, stations, latch_footprint):
     # Section the closed leaves below the peg tips. Count only contours well
     # inside the perimeter so wall-connected supports and hardware can vary.
     interior = rounded_rectangle(footprint, 2.5).offset(-0.2)
@@ -163,9 +181,14 @@ def check_freestanding_pegs(closed, footprint, stations):
         islands = [section for section in closed.slice(level).decompose()
                    if (section - interior).area() < AREA_TOLERANCE]
         peg = CrossSection.circle(0.1, 24).translate((station[0], -abs(station[1])))
-        require(len(islands) == 1 and (peg - islands[0]).area() < AREA_TOLERANCE,
-                f"Expected only the upright peg as a freestanding interior feature at Z={level:g} mm")
-    print("Only the upright peg stands free of the walls on each leaf")
+        require(sum((peg - island).area() < AREA_TOLERANCE for island in islands) == 1,
+                f"Expected one free-standing peg at Z={level:g} mm")
+        other_islands = [island for island in islands if (peg - island).area() >= AREA_TOLERANCE]
+        require(len(other_islands) <= 2 and all(
+            (island - latch_footprint).area() < AREA_TOLERANCE and island.area() < 5
+            for island in other_islands
+        ), f"Unexpected freestanding structure at Z={level:g} mm outside the slim latch tines")
+    print("Interior sections contain the upright pegs and only slim local latch hardware")
 
 
 def check_enclosure(closed, heads, placements, envelope, footprint):
@@ -271,6 +294,50 @@ def check_latch_retention(base, lid, pivot, latch_region):
                   f"across {HINGE_RADIAL_PLAY:g} mm radial and ±{HINGE_AXIAL_PLAY:g} mm axial hinge play")
             return
     raise ValueError("No tested latch angle blocks rigid opening across the modeled radial and axial hinge play")
+
+
+def spread_tine(tine, travel):
+    span = tine.bounding_box()[5] - TINE_ROOT_HEIGHT
+    crest = (TINE_CREST_HEIGHT - TINE_ROOT_HEIGHT) / span
+    crest_displacement = crest**2 * (3 - crest)
+
+    def bend(vertices):
+        # The cantilever profile gives zero movement and slope at the clamped root.
+        height = (vertices[:, 2] - TINE_ROOT_HEIGHT) / span
+        deflected = vertices.copy()
+        deflected[:, 0] += travel * height**2 * (3 - height) / crest_displacement
+        return deflected
+
+    return tine.warp_batch(bend)
+
+
+def check_latch_release(base, lid, pivot, heads, latch_footprint):
+    height = base.bounding_box()[5] - TINE_ROOT_HEIGHT + 1
+    moving = base ^ latch_footprint.extrude(height).translate((0, 0, TINE_ROOT_HEIGHT))
+    tines = sorted(moving.decompose(), key=lambda tine: tine.bounding_box()[0])
+    require(len(tines) == 2 and all(tine.bounding_box()[5] > TINE_CREST_HEIGHT for tine in tines),
+            "Internal latch lacks two independent spring tines with free tips")
+    left, right = [tine.refine_to_length(0.8) for tine in tines]
+    fixed = base - moving
+    release_angle = 165
+    obstacles = ((fixed, "tray"), (heads[0], "head 1"), (heads[1], "head 2"),
+                 (swing(lid, pivot, 180), "seated lid"), (swing(lid, pivot, release_angle), "released lid"))
+
+    # Spread at the nominal seated angle, swing through engagement, then relax the springs.
+    for travel in np.linspace(0, TINE_RELEASE_SPREAD, 26):
+        spread = spread_tine(left, -travel) + spread_tine(right, travel)
+        require(spread.status() == Error.NoError and spread.volume() > 0, "Could not model latch spring flex")
+        for obstacle, name in obstacles:
+            require((spread ^ obstacle).volume() < VOLUME_TOLERANCE,
+                    f"Latch spring flex contacts the {name} at {travel:.2f} mm of crest travel")
+
+    released_base = fixed + spread
+    require(released_base.status() == Error.NoError, "Could not assemble the deflected tray model")
+    for angle in np.linspace(release_angle, 180, 241):
+        require((released_base ^ swing(lid, pivot, angle)).volume() < VOLUME_TOLERANCE,
+                f"Spread latch tines still block the lid at {angle:.4f}°")
+    print(f"Sampled nominal release path clears the packed heads and shell with "
+          f"{TINE_RELEASE_SPREAD:g} mm of lateral crest travel per tine")
 
 
 def bristle_tips(gauge):
@@ -550,17 +617,19 @@ def main():
     gauge = travel_gauge()
     heads = [placement.place(gauge) for placement in PACKING_POSITIONS]
     closed = base + swing(lid, PIVOT, 180)
-    latch_region = Manifold.cube((9, 5, 10)).translate((-4.5, -54.4, PIVOT[2] - 5))
-    latch_projection = Manifold.cube((9, 5, 26)).translate((-4.5, -54.4, 0))
+    latch_footprint = CrossSection.square((14, 2.1)).translate((-20, -49.1))
+    latch_region = latch_footprint.extrude(6).translate((0, 0, 13))
     hinge_region = Manifold.cube((27, 8.5, 26)).translate((-13.5, -4.25, 0))
-    check_rectangular_shell(closed, SHELL_FOOTPRINT, (5, 10, 15.6, 20.6), hinge_region + latch_projection)
-    check_freestanding_pegs(closed, SHELL_FOOTPRINT, STATIONS)
+    check_rectangular_shell(closed, SHELL_FOOTPRINT, (5, 10, 15.6, 20.6), hinge_region)
+    check_front_release(closed, SHELL_FOOTPRINT, PIVOT[2])
+    check_freestanding_pegs(closed, SHELL_FOOTPRINT, STATIONS, latch_footprint)
     check_enclosure(closed, heads, PACKING_POSITIONS, PACKED_ENVELOPE, SHELL_FOOTPRINT)
     check_crown_vents(closed, gauge, heads, PACKING_POSITIONS)
     check_insertion(base, lid, gauge, PACKING_POSITIONS)
     check_shaft_support(base, gauge, PACKING_POSITIONS)
     check_motion(base, lid, PIVOT, heads, latch_region)
     check_latch_retention(base, lid, PIVOT, latch_region)
+    check_latch_release(base, lid, PIVOT, heads, latch_footprint)
     check_transport(closed, gauge, PACKING_POSITIONS)
     check_combined_transport(closed, gauge, PACKING_POSITIONS)
     check_heel_pivot_transport(closed, gauge, PACKING_POSITIONS)

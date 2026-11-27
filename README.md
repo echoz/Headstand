@@ -2,19 +2,19 @@
 
 ## Folding stand with storage for two heads
 
-Pull the thumb tab outward and open the case flat. At the sink, set each head on the centered peg in its half. Two matching slots run lengthwise from beneath the heel. Each continues under the floor to an outlet in the nearest short end, so water has a path out on a level counter.
+Slip a fingernail into the shallow recess at the center of the front seam and lift the lid. The hidden snap releases as the two spring arms spread behind the front wall. Open the case flat and set each head on the centered peg in its half. Two matching slots run lengthwise from beneath the heel. Each continues under the floor to an outlet in the nearest short end, so water has a path out on a level counter.
 
-For travel, lay both heads in the half with the latch. Put their round ends at opposite ends of the case, with the bristles facing inward. The shaped inside edges support the hard shafts and crown backs, leaving the middle of each half clear. Fold the lid shut until the latch catches.
+For travel, lay both heads in the half with the two spring arms. Put their round ends at opposite ends of the case, with the bristles facing inward. The shaped inside edges support the hard shafts and crown backs. Press the lid closed until the snap engages.
 
-![Open case viewed from above, with one long slot on each side of each centered peg. Below are the packed heads and the closed case.](renders/Storage-stand.png)
+![Closed rectangular case with a flush front and a centered fingernail recess. Below are the open case and a close-up of its internal snap.](renders/Storage-stand.png)
 
-The straight-sided shell measures **79.2 × 47.1 mm**, with a 2.4 mm radius at the corners. Including the captive hinge and latch, the closed case measures **79.2 × 57.1 × 25.6 mm**. The open footprint is **79.2 × 105.95 mm**. Each slot is **23.2 × 2.4 mm** with the default peg. Its outer end also vents the bristles when the heads are packed.
+The straight-sided shell measures **79.2 × 47.1 mm**, with a 2.4 mm radius at the corners. Including the rear hinge, the closed case measures **79.2 × 54.8 × 25.6 mm**. The open footprint is **79.2 × 102.5 mm**. Each slot is **23.2 × 2.4 mm** with the default peg. Its outer end also vents the bristles when the heads are packed.
 
 Print the [storage stand STL](exports/Storage-stand.stl) as one object, flat open with the pegs up. Keep the supplied orientation at 100% scale in millimeters, with supports and brim off. Let the plate cool before lifting the case and gently folding it for the first time. To adjust the peg diameter or insertion depth, open the [storage model](model/Storage-stand.scad) with the other files in the same model directory, then export its `open` view.
 
-Bambu Studio 2.8.2.61 estimated **1 hr 20 min 42 sec and 36.57 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill.
+Bambu Studio 2.8.2.61 estimated **1 hr 21 min 53 sec and 36.55 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill.
 
-The provisional fit target for each classic Oral-B Pro CrossAction head is 74 mm overall, with a 14.4 mm heel and a 17 mm round crown measuring 22 mm from back to bristle tips. The [storage geometry check](scripts/check_storage_stand.py) uses two solid gauges of that shape. Actual brush fit, hinge release and retention in a travel bag still need a physical trial.
+The provisional fit target for each classic Oral-B Pro CrossAction head is 74 mm overall, with a 14.4 mm heel and a 17 mm round crown measuring 22 mm from back to bristle tips. The [storage geometry check](scripts/check_storage_stand.py) uses two solid gauges of that shape. Actual brush fit, first hinge movement, snap opening force and durability in a travel bag still need a physical trial.
 
 ## Print-in-place folding peg case
 
