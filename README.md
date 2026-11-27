@@ -1,5 +1,19 @@
 # Headstand
 
+## Folding stand with storage for two heads
+
+Lay both heads in the half with the tall guides. Point their round heads toward opposite ends of the case, with the bristles facing the nearest long outside wall. The cradles support the shafts, and the guides locate the hard backs of the heads. At the sink, open the case flat, lift the heads out and set one upright on each hidden peg. The hinge and latch print with the case.
+
+The closed case measures **84 × 51.2 × 25.6 mm**, including the hinge and latch. Turning the crowns sideways makes it **6.4 mm thinner** than the earlier two-head travel case. The open footprint is **84 × 95.3 mm**. Slots beside the crowns vent the closed case. Outlets beneath the upright heads lead through the floor to the space between the runners.
+
+![Storage variant with two brush heads packed for travel, standing at the sink, and the case closed](renders/Storage-stand.png)
+
+Print the [storage stand STL](exports/Storage-stand.stl) as one object, flat open, runners down and pegs up. Use the supplied orientation at 100% scale in millimeters, with supports and brim off. To edit the design, keep the [storage model](model/Storage-stand.scad), [folding model](model/Folding-stand.scad) and [compact stand model](model/Compact-stand.scad) together in the same directory. Export the storage model's `open` view for printing.
+
+Bambu Studio 2.8.2.61 estimated **1 hr 21 min and 32.07 g** for an X1 Carbon with a 0.4 mm nozzle, Generic PETG, a textured PEI plate, 0.20 mm layers, four walls and 15% grid infill. Let the plate cool before lifting the case and gently folding it for the first time.
+
+The provisional fit target for each classic Oral-B Pro CrossAction head is 74 mm overall, with a 14.4 mm heel and a 17 mm round crown measuring 22 mm from back to bristle tips. The [storage geometry check](scripts/check_storage_stand.py) uses two solid gauges of that shape. Actual brush fit, hinge release and retention in a travel bag still need a physical trial.
+
 ## Print-in-place folding peg case
 
 Print the [folding stand STL](exports/Folding-stand.stl) to make the assembled case in one run. Open the two halves flat and place them on the counter. Three low rails under each half support its brush head and raise the underside **1 mm** above the counter. The open footprint is **53.1 × 33 mm**.
